@@ -14,21 +14,47 @@ public class TripsController : ControllerBase
     {
         _context = context;
     }
-    
+
     [HttpGet]
-    public async Task<IActionResult> GetTrips()
+    public async Task<ActionResult> GetTrips([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
     {
-        var trips = await _context.Trips
-            .Select(e => new
+        // Fetch data about trips from the database and order them by date
+        var tripsQuery = _context.Trips
+            .OrderByDescending(t => t.DateFrom);
+
+        // Calculate the total number of trips
+        var totalTrips = await tripsQuery.CountAsync();
+
+        // Fetch the trips for the current page
+        var trips = await tripsQuery
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(trip => new
             {
-                Name = e.Name,
-                Countries = e.IdCountries.Select(c => new
+                Name = trip.Name,
+                Description = trip.Description,
+                DateFrom = trip.DateFrom,
+                DateTo = trip.DateTo,
+                MaxPeople = trip.MaxPeople,
+                Countries = trip.IdCountries.Select(country => new
                 {
-                    Name = c.Name
+                    Name = country.Name
+                }),
+                Clients = trip.ClientTrips.Select(tripClient => new
+                {
+                    FirstName = tripClient.IdClientNavigation.FirstName,
+                    LastName = tripClient.IdClientNavigation.LastName
                 })
             })
             .ToListAsync();
-        
-        return Ok(trips);
+
+        // Return the trips along with some additional information
+        return Ok(new
+        {
+            PageNum = page,
+            PageSize = pageSize,
+            AllPages = (int)Math.Ceiling(totalTrips / (double)pageSize),
+            Trips = trips
+        });
     }
 }
