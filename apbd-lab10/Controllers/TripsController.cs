@@ -70,14 +70,6 @@ public class TripsController : ControllerBase
                 return BadRequest("Client with this PESEL already exists.");
             }
 
-            // Check if the client is already assigned to the trip
-            var existingClientTrip = await _context.ClientTrips
-                .AnyAsync(ct => ct.IdClientNavigation.Pesel == addClientTripDto.Pesel && ct.IdTrip == idTrip);
-            if (existingClientTrip)
-            {
-                return BadRequest("Client is already assigned to this trip.");
-            }
-
             // Check if the trip exists and if DateFrom is in the future
             var trip = await _context.Trips.FindAsync(idTrip);
             if (trip == null || trip.DateFrom <= DateTime.Now)
@@ -102,7 +94,7 @@ public class TripsController : ControllerBase
             var clientTrip = new ClientTrip
             {
                 IdClient = client.IdClient,
-                IdTrip = addClientTripDto.IdTrip,
+                IdTrip = idTrip,
                 PaymentDate = addClientTripDto.PaymentDate,
                 RegisteredAt = DateTime.Now
             };
